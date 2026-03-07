@@ -64,3 +64,46 @@ fn nearest_neighbor(distance: &Vec<Vec<f64>>, time: &Vec<Vec<f64>>, start: usize
 
     (route, total_cost)
 }
+
+// Function to read city coordinates from a file and return them as a vector of tuples (x, y)
+fn read_city_cords(path: &str) -> Vec<(f64,f64)> {
+    let content = fs::read_to_string(path).unwrap();
+    let mut coords: Vec<(f64, f64)> = Vec::new();
+    let mut reading: bool = false;
+
+    for line in content.lines() {
+        if line.starts_with("NODE_COORD_SECTION") {
+            reading = true;
+            continue;
+        }
+
+        if reading {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+
+            if parts.len() == 3 {
+                let x: f64 = parts[1].parse().unwrap();
+                let y: f64 = parts[2].parse().unwrap();
+                coords.push((x, y));
+            }
+        }
+    }
+
+    coords
+}
+
+// Function to build a distance matrix from city coordinates using Euclidean distance
+fn build_distance_matrix(coords: &Vec<(f64, f64)>) -> Vec<Vec<f64>> {
+    let city_num = coords.len();
+    let mut matrix = vec![vec![0.0; city_num]; city_num];
+
+    for i in 0..city_num {
+        for j in 0..city_num {
+            let dx = coords[i].0 - coords[j].0;
+            let dy = coords[i].1 - coords[j].1;
+
+            matrix[i][j] = (dx*dx + dy*dy).sqrt();
+        }
+    }
+    
+    matrix
+}
