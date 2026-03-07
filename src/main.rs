@@ -36,13 +36,13 @@ fn nearest_neighbor(distance: &Vec<Vec<f64>>, time: &Vec<Vec<f64>>, start: usize
         let mut nearest_city: Option<usize> = None;
         let mut nearest_cost = f64::INFINITY;
         
-        for i in 0..cities_number {
-            if !visited_cities[i] {
-                let current_cost = travel_cost(current_city, i, distance, time, alpha, beta);
+        for j in 0..cities_number {
+            if !visited_cities[j] {
+                let current_cost = travel_cost(current_city, j, distance, time, alpha, beta);
                 
                 if current_cost < nearest_cost {
                     nearest_cost = current_cost;
-                    nearest_city = Some(i);
+                    nearest_city = Some(j);
                 }
             }
         }
