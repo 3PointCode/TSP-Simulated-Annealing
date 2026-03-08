@@ -1,3 +1,5 @@
+use std::fs;
+
 fn main() {
     let distance = vec![
         vec![0.0, 10.0, 15.0, 20.0],
@@ -13,6 +15,14 @@ fn main() {
         vec![15.0, 18.0, 10.0, 0.0],
     ];
 
+    let (route, cost) = nearest_neighbor(&distance, &time, 0, 0.5, 0.5);
+    println!("Route: {:?}", route);
+    println!("Total cost: {}", cost);
+
+    let coords = read_city_cords("data/euclidA100.tsp");
+    let distance = build_distance_matrix(&coords);
+    let coords = read_city_cords("data/euclidB100.tsp");
+    let time = build_distance_matrix(&coords);
     let (route, cost) = nearest_neighbor(&distance, &time, 0, 0.5, 0.5);
     println!("Route: {:?}", route);
     println!("Total cost: {}", cost);
