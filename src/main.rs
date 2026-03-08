@@ -1,24 +1,6 @@
 use std::fs;
 
 fn main() {
-    let distance = vec![
-        vec![0.0, 10.0, 15.0, 20.0],
-        vec![10.0, 0.0, 35.0, 25.0],
-        vec![15.0, 35.0, 0.0, 30.0],
-        vec![20.0, 25.0, 30.0, 0.0],
-    ];
-
-    let time = vec![
-        vec![0.0, 8.0, 12.0, 15.0],
-        vec![8.0, 0.0, 20.0, 18.0],
-        vec![12.0, 20.0, 0.0, 10.0],
-        vec![15.0, 18.0, 10.0, 0.0],
-    ];
-
-    let (route, cost) = nearest_neighbor(&distance, &time, 0, 0.5, 0.5);
-    println!("Route: {:?}", route);
-    println!("Total cost: {}", cost);
-
     let coords = read_city_cords("data/euclidA100.tsp");
     let distance = build_distance_matrix(&coords);
     let coords = read_city_cords("data/euclidB100.tsp");
@@ -116,4 +98,38 @@ fn build_distance_matrix(coords: &Vec<(f64, f64)>) -> Vec<Vec<f64>> {
     }
     
     matrix
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_nearest_neighbour_7_cities() {
+        let distance = vec![
+            vec![0.0, 12.0, 10.0, 19.0, 8.0, 14.0, 16.0],
+            vec![12.0, 0.0, 3.0, 7.0, 2.0, 8.0, 9.0],
+            vec![10.0, 3.0, 0.0, 6.0, 20.0, 4.0, 5.0],
+            vec![19.0, 7.0, 6.0, 0.0, 4.0, 3.0, 2.0],
+            vec![8.0, 2.0, 20.0, 4.0, 0.0, 6.0, 7.0],
+            vec![14.0, 8.0, 4.0, 3.0, 6.0, 0.0, 1.0],
+            vec![16.0, 9.0, 5.0, 2.0, 7.0, 1.0, 0.0],
+        ];
+
+        let time = vec![
+            vec![0.0, 10.0, 8.0, 15.0, 7.0, 11.0, 13.0],
+            vec![10.0, 0.0, 2.0, 6.0, 3.0, 7.0, 8.0],
+            vec![8.0, 2.0, 0.0, 5.0, 17.0, 3.0, 4.0],
+            vec![15.0, 6.0, 5.0, 0.0, 3.0, 2.0, 1.0],
+            vec![7.0, 3.0, 17.0, 3.0, 0.0, 5.0, 6.0],
+            vec![11.0, 7.0, 3.0, 2.0, 5.0, 0.0, 1.0],
+            vec![13.0, 8.0, 4.0, 1.0, 6.0, 1.0, 0.0],
+        ];
+
+        let (route, cost) = nearest_neighbor(&distance, &time, 0, 0.5, 0.5);
+        let expected_cost = 35.5;
+        let expected_route = vec![0, 4, 1, 2, 5, 6, 3, 0];
+        assert!((cost - expected_cost).abs() < 1e-6);
+        assert_eq!(route, expected_route);
+    }
 }
