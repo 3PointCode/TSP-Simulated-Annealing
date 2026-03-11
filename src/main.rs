@@ -2,17 +2,24 @@ use std::fs;
 use rand::Rng;
 
 fn main() {
-    let coords = read_city_coords("data/euclidA100.tsp");
+    let pairs = read_cost_pairs("data/best.euclidAB300.tsp");
+    let coords = read_city_coords("data/euclidA300.tsp");
     let distance = build_distance_matrix(&coords);
-    let coords = read_city_coords("data/euclidB100.tsp");
+    let coords = read_city_coords("data/euclidB300.tsp");
     let time = build_distance_matrix(&coords);
-    let (route, cost) = nearest_neighbor(&distance, &time, 0, 0.5, 0.5);
-    println!("Route: {:?}", route);
-    println!("Total cost: {}", cost);
+    let (_, cost) = nearest_neighbor(&distance, &time, 0, 0.5, 0.5);
+    println!("Total cost: {}", cost.round());
 
-    let (optimized_route, optimized_cost) = simmulated_annealing(&distance, &time, 0, 0.5, 0.5, 10000.0, 0.001, 0.95, 1000);
+    let (optimized_route, optimized_cost) = simmulated_annealing(&distance, &time, 0, 0.5, 0.5, 10000.0, 0.001, 0.995, 1000);
+    match find_best_pair(&pairs, 0.5, 0.5) {
+        Some(((a, b), score)) => {
+            println!("Best Route Pair: ({}, {})", a, b);
+            println!("Best Route Score: {}", score);
+        },
+        None => println!("No pairs found!"),
+    }
     println!("Optimized Route: {:?}", optimized_route);
-    println!("Optimized Cost: {}", optimized_cost);
+    println!("Optimized Cost: {}", optimized_cost.round());
 }
 
 // Function to calculate the travel cost between two cities based on distance and time
@@ -82,7 +89,7 @@ fn generate_neighbor(route: &[usize], rng: &mut impl Rng) -> Vec<usize> {
 
     let n = neighbor.len();
     let mut i = rng.gen_range(1..n - 2);
-    let mut j = rng.gen_range(1..n - 1);
+    let mut j = rng.gen_range(i + 1..n - 1);
 
     if i > j {
         std::mem::swap(&mut i, &mut j);
@@ -162,6 +169,48 @@ fn read_city_coords(path: &str) -> Vec<(f64,f64)> {
     }
 
     coords
+}
+
+fn read_cost_pairs(path: &str) -> Vec<(f64, f64)> {
+    let content = fs::read_to_string(path).expect("Failed to read the file!");
+    let mut pairs = Vec::new();
+
+    for line in content.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+
+        if parts.len() == 2 {
+            let a: f64 = parts[0].parse().expect("Couldn't parse the value!");
+            let b: f64 = parts[1].parse().expect("Couldn't parse the value!");
+            
+            pairs.push((a, b));
+        }
+    }
+
+    pairs
+}
+
+fn weighted_score(a: f64, b: f64, alpha: f64, beta: f64) -> f64 {
+    alpha * a + beta * b
+}
+
+fn find_best_pair(pairs: &[(f64, f64)], alpha: f64, beta: f64) -> Option<((f64, f64), f64)> {
+    if pairs.is_empty() {
+        return None;
+    }
+
+    let mut best_pair = pairs[0];
+    let mut best_score = weighted_score(pairs[0].0, pairs[0].1, alpha, beta);
+
+    for &(a, b) in &pairs[1..] {
+        let score = weighted_score(a, b, alpha, beta);
+
+        if score < best_score {
+            best_pair = (a, b);
+            best_score = score;
+        }
+    }
+
+    Some((best_pair, best_score))
 }
 
 // Function to build a distance matrix from city coordinates using Euclidean distance
