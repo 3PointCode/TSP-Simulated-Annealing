@@ -1,26 +1,41 @@
 mod algorithms;
 mod utils;
+mod config;
 
 use algorithms::{nearest_neighbor, simmulated_annealing};
 use utils::{read_city_coords, build_distance_matrix, read_cost_pairs, find_best_pair};
+use config::Config;
 
 fn main() {
-    let pairs = read_cost_pairs("data/best.euclidAB300.tsp");
-    let coords = read_city_coords("data/euclidA300.tsp");
-    let distance = build_distance_matrix(&coords);
-    let coords = read_city_coords("data/euclidB300.tsp");
-    let time = build_distance_matrix(&coords);
-    let (_, cost) = nearest_neighbor(&distance, &time, 0, 0.5, 0.5);
-    println!("Total cost: {}", cost.round());
+    let config = Config::from_file("src/config.json");
+    config.validate();
 
-    let (optimized_route, optimized_cost) = simmulated_annealing(&distance, &time, 0, 0.5, 0.5, 10000.0, 0.001, 0.995, 1000);
-    match find_best_pair(&pairs, 0.5, 0.5) {
-        Some(((a, b), score)) => {
-            println!("Best Route Pair: ({}, {})", a, b);
-            println!("Best Route Score: {}", score);
-        },
-        None => println!("No pairs found!"),
+    let coords_a = read_city_coords(&config.data_a_path);
+    let coords_b = read_city_coords(&config.data_b_path);    
+    let distance = build_distance_matrix(&coords_a);
+    let time = build_distance_matrix(&coords_b);
+
+    let (_, cost) = nearest_neighbor(&distance, &time, config.start_city, config.alpha, config.beta);
+    println!("Nearest Neighbor Cost: {:.2}", cost);
+
+    for &initial_temp in &config.sa.initial_temps {
+        for &min_temp in &config.sa.min_temps {
+            for &cooling_rate in &config.sa.cooling_rates {
+                for &iterations_per_temp in &config.sa.iterations_per_temp_values {
+                    println!("Running SA: T0: {}, Tmin: {}, Cooling: {}, Iterations: {}", initial_temp, min_temp, cooling_rate, iterations_per_temp);
+
+                    let (_, optimized_cost) = simmulated_annealing(&distance, &time, 
+                        config.start_city, config.alpha, config.beta, initial_temp, min_temp, cooling_rate, iterations_per_temp);
+                    
+                    println!("Optimized Cost: {:.2}", optimized_cost);
+                }
+            }
+        }
     }
-    println!("Optimized Route: {:?}", optimized_route);
-    println!("Optimized Cost: {}", optimized_cost.round());
+
+    let pairs = read_cost_pairs(&config.best_pairs_path);
+    if let Some((best_pair, best_score)) = find_best_pair(&pairs, config.alpha, config.beta) {
+        println!("Best Route Pair from dataset: {:?}", best_pair);
+        println!("Best Route Cost: {}", best_score);
+    }
 }
