@@ -126,7 +126,52 @@ pub fn simmulated_annealing(distance: &[Vec<f64>], time: &[Vec<f64>], start: usi
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
+    fn simple_matrices() -> (Vec<Vec<f64>>, Vec<Vec<f64>>) {
+        let d = vec![
+            vec![0.0, 10.0, 20.0],
+            vec![10.0, 0.0, 10.0],
+            vec![20.0, 10.0, 0.0],
+        ];
+        let t = vec![
+            vec![0.0, 4.0, 8.0],
+            vec![4.0, 0.0, 4.0],
+            vec![8.0, 4.0, 0.0],
+        ];
+        (d, t)
+    }
+
+    #[test]
+    fn test_travel_cost() {
+        let (d, t) = simple_matrices();
+        // 0.5 * 10 + 0.5 * 4 = 7.0
+        let cost = travel_cost(0, 1, &d, &t, 0.5, 0.5);
+        assert!((cost - 7.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_travel_cost_only_distance() {
+        let (d, t) = simple_matrices();
+        let cost = travel_cost(0, 2, &d, &t, 1.0, 0.0);
+        assert!((cost - 20.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_route_cost_two_edges() {
+        let (d, t) = simple_matrices();
+        // 0→1: 7.0, 1→2: 7.0 => łącznie 14.0
+        let cost = route_cost(&[0, 1, 2], &d, &t, 0.5, 0.5);
+        assert!((cost - 14.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_route_cost_single_edge() {
+        let (d, t) = simple_matrices();
+        let cost = route_cost(&[0, 2], &d, &t, 0.5, 0.5);
+        // 0.5*20 + 0.5*8 = 14.0
+        assert!((cost - 14.0).abs() < 1e-9);
+    }
+
     #[test]
     fn test_nearest_neighbour_7_cities() {
         let distance = vec![
@@ -154,5 +199,59 @@ mod tests {
         let expected_route = vec![0, 4, 1, 2, 5, 6, 3, 0];
         assert!((cost - expected_cost).abs() < 1e-6);
         assert_eq!(route, expected_route);
+    }
+
+    #[test]
+    fn test_nearest_neighbor_starts_and_ends_at_start() {
+        let (d, t) = simple_matrices();
+        let (route, _) = nearest_neighbor(&d, &t, 0, 0.5, 0.5);
+        assert_eq!(route[0], 0);
+        assert_eq!(*route.last().unwrap(), 0);
+    }
+
+    #[test]
+    fn test_nearest_neighbor_visits_all_cities() {
+        let (d, t) = simple_matrices();
+        let (route, _) = nearest_neighbor(&d, &t, 0, 0.5, 0.5);
+        let mut cities: Vec<usize> = route[..route.len() - 1].to_vec();
+        cities.sort();
+        assert_eq!(cities, vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn test_generate_neighbor_preserves_cities() {
+        let route = vec![0, 1, 2, 3, 4, 5, 0];
+        let mut rng = rand::thread_rng();
+        let neighbor = generate_neighbor(&route, &mut rng);
+        let mut r_sorted = route.clone();
+        let mut n_sorted = neighbor.clone();
+        r_sorted.sort();
+        n_sorted.sort();
+        assert_eq!(r_sorted, n_sorted);
+    }
+
+    #[test]
+    fn test_generate_neighbor_short_route_unchanged() {
+        let route = vec![0, 1, 2, 0]; // długość 4 → bez zmian
+        let mut rng = rand::thread_rng();
+        let neighbor = generate_neighbor(&route, &mut rng);
+        assert_eq!(route, neighbor);
+    }
+
+    #[test]
+    fn test_simmulated_annealing_visits_all_cities() {
+        let (d, t) = simple_matrices();
+        let (route, _) = simmulated_annealing(&d, &t, 0, 0.5, 0.5, 100.0, 0.1, 0.9, 10);
+        let mut cities: Vec<usize> = route[..route.len() - 1].to_vec();
+        cities.sort();
+        assert_eq!(cities, vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn test_simmulated_annealing_starts_and_ends_at_start() {
+        let (d, t) = simple_matrices();
+        let (route, _) = simmulated_annealing(&d, &t, 0, 0.5, 0.5, 100.0, 0.1, 0.9, 10);
+        assert_eq!(route[0], 0);
+        assert_eq!(*route.last().unwrap(), 0);
     }
 }
