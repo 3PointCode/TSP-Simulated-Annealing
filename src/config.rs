@@ -53,6 +53,117 @@ impl Config {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    fn valid_config() -> Config {
+        Config {
+            data_a_path: "a.tsp".into(),
+            data_b_path: "b.tsp".into(),
+            best_pairs_path: "best.txt".into(),
+            start_city: 0,
+            alpha: 0.5,
+            beta: 0.5,
+            sa: SimulatedAnnealingConfig {
+                initial_temps: vec![1000.0],
+                min_temps: vec![0.1],
+                cooling_rates: vec![0.9],
+                iterations_per_temp_values: vec![100],
+            },
+        }
+    }
+
+    #[test]
+    fn test_validate_valid_config() {
+        valid_config().validate();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_validate_alpha_beta_sum_not_one() {
+        let mut c = valid_config();
+        c.alpha = 0.3;
+        c.beta = 0.3;
+        c.validate();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_validate_negative_alpha() {
+        let mut c = valid_config();
+        c.alpha = -0.5;
+        c.beta = 1.5;
+        c.validate();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_validate_empty_initial_temps() {
+        let mut c = valid_config();
+        c.sa.initial_temps = vec![];
+        c.validate();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_validate_empty_min_temps() {
+        let mut c = valid_config();
+        c.sa.min_temps = vec![];
+        c.validate();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_validate_empty_cooling_rates() {
+        let mut c = valid_config();
+        c.sa.cooling_rates = vec![];
+        c.validate();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_validate_cooling_rate_out_of_range() {
+        let mut c = valid_config();
+        c.sa.cooling_rates = vec![1.5];
+        c.validate();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_validate_initial_temp_less_than_min_temp() {
+        let mut c = valid_config();
+        c.sa.initial_temps = vec![0.05];
+        c.sa.min_temps = vec![0.1];
+        c.validate();
+    }
+
+    #[test]
+    fn test_from_file_valid_json() {
+        let json = r#"{
+            "data_a_path": "a.tsp",
+            "data_b_path": "b.tsp",
+            "best_pairs_path": "best.txt",
+            "start_city": 0,
+            "alpha": 0.5,
+            "beta": 0.5,
+            "sa": {
+                "initial_temps": [1000.0],
+                "min_temps": [0.1],
+                "cooling_rates": [0.9],
+                "iterations_per_temp_values": [100]
+            }
+        }"#;
+        let mut f = tempfile::NamedTempFile::new().unwrap();
+        write!(f, "{}", json).unwrap();
+        let config = Config::from_file(f.path().to_str().unwrap());
+        assert!((config.alpha - 0.5).abs() < 1e-9);
+        assert_eq!(config.start_city, 0);
+        assert_eq!(config.sa.initial_temps, vec![1000.0]);
+    }
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct SimulatedAnnealingConfig {
     pub initial_temps: Vec<f64>,
