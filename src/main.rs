@@ -29,6 +29,7 @@ fn main() {
 
     let mut best_sa_cost = f64::INFINITY;
     let mut best_sa_params: Option<(f64, f64, f64, usize)> = None;
+    let mut best_sa_route: Option<Vec<usize>> = None;
 
     for &initial_temp in &config.sa.initial_temps {
         for &min_temp in &config.sa.min_temps {
@@ -37,17 +38,25 @@ fn main() {
                     println!("Running SA: T0: {}, Tmin: {}, Cooling: {}, Iterations: {}", initial_temp, min_temp, cooling_rate, iterations_per_temp);
 
                     let start_time = Instant::now();
-                    let (_, optimized_cost) = simulated_annealing(&distance, &time, 
+                    let result = simulated_annealing(&distance, &time, 
                         config.start_city, config.alpha, config.beta, initial_temp, min_temp, cooling_rate, iterations_per_temp);
                     let duration_ms = start_time.elapsed().as_millis();
+                    
+                    let ratio_to_best = result.best_cost / best_score;
 
-                    println!("Optimized Cost: {:.2} | Time: {} ms | Ratio to best: {:.4}", optimized_cost, duration_ms, optimized_cost / best_score);
-                    append_result_row(results_path, initial_temp, min_temp, cooling_rate, iterations_per_temp, cost,
-                        optimized_cost, best_score, duration_ms);
+                    println!("Optimized Cost: {:.2} | Time: {} ms | Ratio to best: {:.4}", result.best_cost, duration_ms, ratio_to_best);
+                    append_result_row(results_path, initial_temp, min_temp, cooling_rate, iterations_per_temp, cost, result.best_cost,
+                        result.average_accepted_cost, result.accepted_moves, result.evaluated_candidates, best_score, duration_ms);
 
-                    if optimized_cost < best_sa_cost {
-                        best_sa_cost = optimized_cost;
-                        best_sa_params = Some((initial_temp, min_temp, cooling_rate, iterations_per_temp));
+                    if result.best_cost < best_sa_cost {
+                        best_sa_cost = result.best_cost;
+                        best_sa_route = Some(result.best_route.clone());
+                        best_sa_params = Some((
+                            initial_temp,
+                            min_temp,
+                            cooling_rate,
+                            iterations_per_temp,
+                        ));
                     }
                 }
             }
@@ -56,10 +65,20 @@ fn main() {
 
     println!("\nBest SA Cost: {:.2}", best_sa_cost);
 
-    if let Some((initial_temp, min_temp, cooling_rate, iterations_per_temp)) = best_sa_params {
-        println!("Best SA Params: T0={}, Tmin={}, Cooling={}, Iterations={}",
-            initial_temp, min_temp, cooling_rate, iterations_per_temp);
-        println!("Best SA Ratio to best known: {:.4}", best_sa_cost / best_score);
+   if let Some((
+        initial_temp,
+        min_temp,
+        cooling_rate,
+        iterations_per_temp,
+    )) = best_sa_params {
+        println!("Best SA Params: T0={}, Tmin={}, Cooling={}, Iterations={}", initial_temp, min_temp, cooling_rate, iterations_per_temp);
+        println!("Best SA Ratio to best known: {:.6}", best_sa_cost / best_score);
+        println!("Best SA Gap to best known: {:.3}%", ((best_sa_cost - best_score) / best_score) * 100.0);
     }
+
+    if let Some(route) = &best_sa_route {
+        println!("Best SA Route: {:?}", route);
+    }
+
     println!("Results saved to: {}", results_path);
 }

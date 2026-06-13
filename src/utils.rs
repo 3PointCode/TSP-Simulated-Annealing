@@ -76,8 +76,21 @@ pub fn init_results_file(path: &str) {
             .open(path)
             .expect("Failed to create results CSV file!");
 
-        writeln!(file, "initial_temp,min_temp,cooling_rate,iterations_per_temp,nearest_neighbor_cost,optimized_cost,best_known_cost,cost_ratio_to_best,gap_percent,duration_ms")
-            .expect("Failed to write header to CSV file!");
+        writeln!(file, concat!("initial_temp,",
+            "min_temp,",
+            "cooling_rate,",
+            "iterations_per_temp,",
+            "nearest_neighbor_cost,",
+            "optimized_cost,",
+            "average_accepted_cost,",
+            "accepted_moves,",
+            "evaluated_candidates,",
+            "acceptance_rate_percent,",
+            "best_known_cost,",
+            "cost_ratio_to_best,",
+            "gap_percent,",
+            "duration_ms")
+        ).expect("Failed to write header to CSV file!");
     }
 }
 
@@ -89,11 +102,28 @@ pub fn append_result_row(
     iterations_per_temp: usize,
     nearest_neighbor_cost: f64,
     optimized_cost: f64,
+    average_accepted_cost: Option<f64>,
+    accepted_moves: usize,
+    evaluated_candidates: usize,
     best_known_cost: f64,
     duration_ms: u128,
 ) {
     let cost_ratio_to_best = optimized_cost / best_known_cost;
     let gap_percent = ((optimized_cost - best_known_cost) / best_known_cost) * 100.0;
+
+    let acceptance_rate_percent =
+        if evaluated_candidates > 0 {
+            accepted_moves as f64
+                / evaluated_candidates as f64
+                * 100.0
+        } else {
+            0.0
+        };
+
+    let average_accepted_cost_text =
+        average_accepted_cost
+            .map(|value| format!("{:.3}", value))
+            .unwrap_or_default();
 
     let mut file = OpenOptions::new()
         .create(true)
@@ -103,17 +133,21 @@ pub fn append_result_row(
 
     writeln!(
         file,
-        "{:.3},{:.3},{:.3},{},{:.3},{:.3},{:.3},{:.3},{:.3},{}",
+        "{:.3},{:.3},{:.3},{},{:.3},{:.3},{},{},{},{:.3},{:.3},{:.6},{:.3},{}",
         initial_temp,
         min_temp,
         cooling_rate,
         iterations_per_temp,
         nearest_neighbor_cost,
         optimized_cost,
+        average_accepted_cost_text,
+        accepted_moves,
+        evaluated_candidates,
+        acceptance_rate_percent,
         best_known_cost,
         cost_ratio_to_best,
         gap_percent,
-        duration_ms
+        duration_ms,
     )
     .expect("Failed to append CSV row!");
 }

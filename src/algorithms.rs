@@ -66,20 +66,25 @@ fn generate_neighbor(route: &[usize], rng: &mut impl Rng) -> Vec<usize> {
     }
 
     let n = neighbor.len();
-    let mut i = rng.gen_range(1..n - 2);
-    let mut j = rng.gen_range(i + 1..n - 1);
-
-    if i > j {
-        std::mem::swap(&mut i, &mut j);
-    }
+    let i = rng.gen_range(1..n - 2);
+    let j = rng.gen_range(i + 1..n - 1);
 
     // reversing the route between i and j, example for i=1, j=4: [0, 1, 2, 3, 4, 5] -> [0, 4, 3, 2, 1, 5]
     neighbor[i..=j].reverse();
     neighbor
 }
 
+#[derive(Debug, Clone)]
+pub struct SimulatedAnnealingResult {
+    pub best_route: Vec<usize>,
+    pub best_cost: f64,
+    pub average_accepted_cost: Option<f64>,
+    pub accepted_moves: usize,
+    pub evaluated_candidates: usize,
+}
+
 pub fn simulated_annealing(distance: &[Vec<f64>], time: &[Vec<f64>], start: usize, alpha: f64, beta: f64,
-    initial_temp: f64, min_temp: f64, cooling_rate: f64, iterations_per_temp: usize) -> (Vec<usize>, f64) {
+    initial_temp: f64, min_temp: f64, cooling_rate: f64, iterations_per_temp: usize) -> SimulatedAnnealingResult {
         let mut rng = rand::thread_rng();
 
         let (initial_route, initial_cost) = nearest_neighbor(distance, time, start, alpha, beta);
@@ -89,38 +94,60 @@ pub fn simulated_annealing(distance: &[Vec<f64>], time: &[Vec<f64>], start: usiz
         let mut best_route = current_route.clone();
         let mut best_cost = current_cost;
 
+        let mut accepted_cost_sum = 0.0;
+        let mut accepted_moves = 0usize;
+        let mut evaluated_candidates = 0usize;
+
         let mut temperature = initial_temp;
 
         while temperature > min_temp {
             for _ in 0..iterations_per_temp {
-                let candidate_route = generate_neighbor(&current_route,&mut rng);
+                let candidate_route = generate_neighbor(&current_route, &mut rng);
                 let candidate_cost = route_cost(&candidate_route, distance, time, alpha, beta);
 
+                evaluated_candidates += 1;
                 let cost_delta = candidate_cost - current_cost;
 
-                if cost_delta < 0.0 {
-                    current_route = candidate_route;
-                    current_cost = candidate_cost;
+                let accepted = if cost_delta < 0.0 {
+                    true
                 } else {
                     let acceptance_probability = (-cost_delta / temperature).exp();
                     let random_value: f64 = rng.r#gen();
-                    
-                    if random_value < acceptance_probability {
-                        current_route = candidate_route;
-                        current_cost = candidate_cost;
-                    }
-                }
+                    random_value < acceptance_probability
+                };
 
-                if current_cost < best_cost {
-                    best_route = current_route.clone();
-                    best_cost = current_cost;
+                if accepted {
+                    current_route = candidate_route;
+                    current_cost = candidate_cost;
+                    
+                    // add only accepted scores to the sum
+                    accepted_cost_sum += current_cost;
+                    accepted_moves += 1;
+
+                    // update the best current solution found
+                    if current_cost < best_cost {
+                        best_route = current_route.clone();
+                        best_cost = current_cost;
+                    }
                 }
             }
 
             temperature *= cooling_rate;
         }
         
-        (best_route, best_cost)
+        let average_accepted_cost = if accepted_moves > 0 {
+            Some(accepted_cost_sum / accepted_moves as f64)
+        } else {
+            None
+        };
+
+        SimulatedAnnealingResult {
+            best_route,
+            best_cost,
+            average_accepted_cost,
+            accepted_moves,
+            evaluated_candidates,
+        }
 }
 
 #[cfg(test)]
@@ -241,8 +268,8 @@ mod tests {
     #[test]
     fn test_simulated_annealing_visits_all_cities() {
         let (d, t) = simple_matrices();
-        let (route, _) = simulated_annealing(&d, &t, 0, 0.5, 0.5, 100.0, 0.1, 0.9, 10);
-        let mut cities: Vec<usize> = route[..route.len() - 1].to_vec();
+        let result = simulated_annealing(&d, &t, 0, 0.5, 0.5, 100.0, 0.1, 0.9, 10);
+        let mut cities: Vec<usize> = result.best_route[..result.best_route.len() - 1].to_vec();
         cities.sort();
         assert_eq!(cities, vec![0, 1, 2]);
     }
@@ -250,8 +277,17 @@ mod tests {
     #[test]
     fn test_simulated_annealing_starts_and_ends_at_start() {
         let (d, t) = simple_matrices();
-        let (route, _) = simulated_annealing(&d, &t, 0, 0.5, 0.5, 100.0, 0.1, 0.9, 10);
-        assert_eq!(route[0], 0);
-        assert_eq!(*route.last().unwrap(), 0);
+        let result = simulated_annealing(&d, &t, 0, 0.5, 0.5, 100.0, 0.1, 0.9, 10);
+        assert_eq!(result.best_route.first().copied(), Some(0));
+        assert_eq!(result.best_route.last().copied(), Some(0));
+    }
+
+    #[test]
+    fn test_simulated_annealing_never_returns_cost_worse_than_initial() {
+        let (distance, time) = simple_matrices();
+        let (_, initial_cost) = nearest_neighbor(&distance, &time, 0, 0.5, 0.5);
+        let result = simulated_annealing(&distance, &time, 0, 0.5, 0.5, 100.0, 0.1, 0.9, 10,);
+
+        assert!(result.best_cost <= initial_cost + 1e-9);
     }
 }
