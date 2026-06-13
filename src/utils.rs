@@ -76,7 +76,8 @@ pub fn init_results_file(path: &str) {
             .open(path)
             .expect("Failed to create results CSV file!");
 
-        writeln!(file, concat!("initial_temp,",
+        writeln!(file, concat!("neighbor_move", 
+            "initial_temp,",
             "min_temp,",
             "cooling_rate,",
             "iterations_per_temp,",
@@ -96,6 +97,7 @@ pub fn init_results_file(path: &str) {
 
 pub fn append_result_row(
     path: &str,
+    neighbor_move: &str,
     initial_temp: f64,
     min_temp: f64,
     cooling_rate: f64,
@@ -133,7 +135,8 @@ pub fn append_result_row(
 
     writeln!(
         file,
-        "{:.3},{:.3},{:.3},{},{:.3},{:.3},{},{},{},{:.3},{:.3},{:.6},{:.3},{}",
+        "{},{:.3},{:.3},{:.3},{},{:.3},{:.3},{},{},{},{:.3},{:.3},{:.6},{:.3},{}",
+        neighbor_move,
         initial_temp,
         min_temp,
         cooling_rate,
