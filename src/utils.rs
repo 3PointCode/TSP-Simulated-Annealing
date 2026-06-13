@@ -29,7 +29,7 @@ pub fn read_city_coords(path: &str) -> Vec<(f64,f64)> {
 }
 
 // Function to build a distance matrix from city coordinates using Euclidean distance
-pub fn build_distance_matrix(coords: &Vec<(f64, f64)>) -> Vec<Vec<f64>> {
+pub fn build_distance_matrix(coords: &[(f64, f64)]) -> Vec<Vec<f64>> {
     let city_num = coords.len();
     let mut matrix = vec![vec![0.0; city_num]; city_num];
 

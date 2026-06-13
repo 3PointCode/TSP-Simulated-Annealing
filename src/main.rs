@@ -2,7 +2,7 @@ mod algorithms;
 mod utils;
 mod config;
 
-use algorithms::{nearest_neighbor, simmulated_annealing};
+use algorithms::{nearest_neighbor, simulated_annealing};
 use utils::{read_city_coords, build_distance_matrix, read_cost_pairs, find_best_pair, ensure_results_dir, init_results_file, append_result_row};
 use config::Config;
 use std::time::Instant;
@@ -37,7 +37,7 @@ fn main() {
                     println!("Running SA: T0: {}, Tmin: {}, Cooling: {}, Iterations: {}", initial_temp, min_temp, cooling_rate, iterations_per_temp);
 
                     let start_time = Instant::now();
-                    let (_, optimized_cost) = simmulated_annealing(&distance, &time, 
+                    let (_, optimized_cost) = simulated_annealing(&distance, &time, 
                         config.start_city, config.alpha, config.beta, initial_temp, min_temp, cooling_rate, iterations_per_temp);
                     let duration_ms = start_time.elapsed().as_millis();
 

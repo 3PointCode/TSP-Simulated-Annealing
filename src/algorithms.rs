@@ -78,7 +78,7 @@ fn generate_neighbor(route: &[usize], rng: &mut impl Rng) -> Vec<usize> {
     neighbor
 }
 
-pub fn simmulated_annealing(distance: &[Vec<f64>], time: &[Vec<f64>], start: usize, alpha: f64, beta: f64,
+pub fn simulated_annealing(distance: &[Vec<f64>], time: &[Vec<f64>], start: usize, alpha: f64, beta: f64,
     initial_temp: f64, min_temp: f64, cooling_rate: f64, iterations_per_temp: usize) -> (Vec<usize>, f64) {
         let mut rng = rand::thread_rng();
 
@@ -239,18 +239,18 @@ mod tests {
     }
 
     #[test]
-    fn test_simmulated_annealing_visits_all_cities() {
+    fn test_simulated_annealing_visits_all_cities() {
         let (d, t) = simple_matrices();
-        let (route, _) = simmulated_annealing(&d, &t, 0, 0.5, 0.5, 100.0, 0.1, 0.9, 10);
+        let (route, _) = simulated_annealing(&d, &t, 0, 0.5, 0.5, 100.0, 0.1, 0.9, 10);
         let mut cities: Vec<usize> = route[..route.len() - 1].to_vec();
         cities.sort();
         assert_eq!(cities, vec![0, 1, 2]);
     }
 
     #[test]
-    fn test_simmulated_annealing_starts_and_ends_at_start() {
+    fn test_simulated_annealing_starts_and_ends_at_start() {
         let (d, t) = simple_matrices();
-        let (route, _) = simmulated_annealing(&d, &t, 0, 0.5, 0.5, 100.0, 0.1, 0.9, 10);
+        let (route, _) = simulated_annealing(&d, &t, 0, 0.5, 0.5, 100.0, 0.1, 0.9, 10);
         assert_eq!(route[0], 0);
         assert_eq!(*route.last().unwrap(), 0);
     }
