@@ -57,20 +57,74 @@ pub fn nearest_neighbor(distance: &[Vec<f64>], time: &[Vec<f64>], start: usize, 
     (route, total_cost)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NeighborMove {
+    TwoOpt,
+    Swap,
+    Insert,
+}
+
+impl NeighborMove {
+    pub const ALL: [NeighborMove; 3] = [
+        NeighborMove::TwoOpt,
+        NeighborMove::Swap,
+        NeighborMove::Insert
+    ];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            NeighborMove::TwoOpt => "two_opt",
+            NeighborMove::Swap => "swap",
+            NeighborMove::Insert => "insert",
+        }
+    }
+}
+
 // Function to generate a new route during the simulated annealing algorithm using the 2-opt
-fn generate_neighbor(route: &[usize], rng: &mut impl Rng) -> Vec<usize> {
+fn generate_neighbor<R: Rng + ?Sized>(route: &[usize], rng: &mut R, move_type: NeighborMove) -> Vec<usize> {
     let mut neighbor = route.to_vec();
 
-    if neighbor.len() <= 4 {
+    if neighbor.len() <= 3 {
         return neighbor;
     }
 
-    let n = neighbor.len();
-    let i = rng.gen_range(1..n - 2);
-    let j = rng.gen_range(i + 1..n - 1);
+    let first_internal_index = 1;
+    let last_internal_exclusive = route.len() - 1;
 
-    // reversing the route between i and j, example for i=1, j=4: [0, 1, 2, 3, 4, 5] -> [0, 4, 3, 2, 1, 5]
-    neighbor[i..=j].reverse();
+    match move_type {
+        NeighborMove::TwoOpt => {
+            // i < j, reverse the path between these two points
+            let i = rng.gen_range(first_internal_index..last_internal_exclusive - 1);
+            let j = rng.gen_range(i + 1..last_internal_exclusive);
+            neighbor[i..=j].reverse();
+        }
+
+        NeighborMove::Swap => {
+            let i = rng.gen_range(first_internal_index..last_internal_exclusive);
+            let mut j = rng.gen_range(first_internal_index..last_internal_exclusive);
+
+            while i == j {
+                j = rng.gen_range(first_internal_index..last_internal_exclusive);
+            }
+
+            neighbor.swap(i, j);
+        }
+
+        NeighborMove::Insert => {
+            let i = rng.gen_range(first_internal_index..last_internal_exclusive);
+            let city = neighbor.remove(i);
+            // insert the removed element
+            let mut j = rng.gen_range(first_internal_index..neighbor.len());
+
+            // don't insert the element in the same place
+            while i == j {
+                j = rng.gen_range(first_internal_index..neighbor.len());
+            }
+
+            neighbor.insert(j, city);
+        }
+    }
+
     neighbor
 }
 
@@ -84,7 +138,7 @@ pub struct SimulatedAnnealingResult {
 }
 
 pub fn simulated_annealing(distance: &[Vec<f64>], time: &[Vec<f64>], start: usize, alpha: f64, beta: f64,
-    initial_temp: f64, min_temp: f64, cooling_rate: f64, iterations_per_temp: usize) -> SimulatedAnnealingResult {
+    initial_temp: f64, min_temp: f64, cooling_rate: f64, iterations_per_temp: usize, move_type: NeighborMove) -> SimulatedAnnealingResult {
         let mut rng = rand::thread_rng();
 
         let (initial_route, initial_cost) = nearest_neighbor(distance, time, start, alpha, beta);
@@ -102,7 +156,7 @@ pub fn simulated_annealing(distance: &[Vec<f64>], time: &[Vec<f64>], start: usiz
 
         while temperature > min_temp {
             for _ in 0..iterations_per_temp {
-                let candidate_route = generate_neighbor(&current_route, &mut rng);
+                let candidate_route = generate_neighbor(&current_route, &mut rng, move_type);
                 let candidate_cost = route_cost(&candidate_route, distance, time, alpha, beta);
 
                 evaluated_candidates += 1;
@@ -249,7 +303,7 @@ mod tests {
     fn test_generate_neighbor_preserves_cities() {
         let route = vec![0, 1, 2, 3, 4, 5, 0];
         let mut rng = rand::thread_rng();
-        let neighbor = generate_neighbor(&route, &mut rng);
+        let neighbor = generate_neighbor(&route, &mut rng, NeighborMove::TwoOpt);
         let mut r_sorted = route.clone();
         let mut n_sorted = neighbor.clone();
         r_sorted.sort();
@@ -261,14 +315,14 @@ mod tests {
     fn test_generate_neighbor_short_route_unchanged() {
         let route = vec![0, 1, 2, 0]; // długość 4 → bez zmian
         let mut rng = rand::thread_rng();
-        let neighbor = generate_neighbor(&route, &mut rng);
+        let neighbor = generate_neighbor(&route, &mut rng, NeighborMove::TwoOpt);
         assert_eq!(route, neighbor);
     }
 
     #[test]
     fn test_simulated_annealing_visits_all_cities() {
         let (d, t) = simple_matrices();
-        let result = simulated_annealing(&d, &t, 0, 0.5, 0.5, 100.0, 0.1, 0.9, 10);
+        let result = simulated_annealing(&d, &t, 0, 0.5, 0.5, 100.0, 0.1, 0.9, 10, NeighborMove::TwoOpt);
         let mut cities: Vec<usize> = result.best_route[..result.best_route.len() - 1].to_vec();
         cities.sort();
         assert_eq!(cities, vec![0, 1, 2]);
@@ -277,7 +331,7 @@ mod tests {
     #[test]
     fn test_simulated_annealing_starts_and_ends_at_start() {
         let (d, t) = simple_matrices();
-        let result = simulated_annealing(&d, &t, 0, 0.5, 0.5, 100.0, 0.1, 0.9, 10);
+        let result = simulated_annealing(&d, &t, 0, 0.5, 0.5, 100.0, 0.1, 0.9, 10, NeighborMove::TwoOpt);
         assert_eq!(result.best_route.first().copied(), Some(0));
         assert_eq!(result.best_route.last().copied(), Some(0));
     }
@@ -286,7 +340,7 @@ mod tests {
     fn test_simulated_annealing_never_returns_cost_worse_than_initial() {
         let (distance, time) = simple_matrices();
         let (_, initial_cost) = nearest_neighbor(&distance, &time, 0, 0.5, 0.5);
-        let result = simulated_annealing(&distance, &time, 0, 0.5, 0.5, 100.0, 0.1, 0.9, 10,);
+        let result = simulated_annealing(&distance, &time, 0, 0.5, 0.5, 100.0, 0.1, 0.9, 10, NeighborMove::TwoOpt);
 
         assert!(result.best_cost <= initial_cost + 1e-9);
     }
