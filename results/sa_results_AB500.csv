@@ -1,4 +1,4 @@
-neighbor_moveinitial_temp,min_temp,cooling_rate,iterations_per_temp,nearest_neighbor_cost,optimized_cost,average_accepted_cost,accepted_moves,evaluated_candidates,acceptance_rate_percent,best_known_cost,cost_ratio_to_best,gap_percent,duration_ms
+neighbor_move,initial_temp,min_temp,cooling_rate,iterations_per_temp,nearest_neighbor_cost,optimized_cost,average_accepted_cost,accepted_moves,evaluated_candidates,acceptance_rate_percent,best_known_cost,cost_ratio_to_best,gap_percent,duration_ms
 two_opt,1000.000,0.100,0.900,250,191894.621,191563.799,354248.035,1111,22000,5.050,172255.000,1.112094,11.209,14
 two_opt,1000.000,0.100,0.900,500,191894.621,191894.621,428297.318,2687,44000,6.107,172255.000,1.114015,11.401,29
 two_opt,1000.000,0.100,0.900,750,191894.621,191894.621,482338.495,4356,66000,6.600,172255.000,1.114015,11.401,41
