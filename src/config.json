@@ -1,7 +1,7 @@
 {
-  "data_a_path": "data/euclidA100.tsp",
-  "data_b_path": "data/euclidB100.tsp",
-  "best_pairs_path": "data/best.euclidAB100.tsp",
+  "data_a_path": "data/euclidE500.tsp",
+  "data_b_path": "data/euclidF500.tsp",
+  "best_pairs_path": "data/best.euclidEF500.tsp",
 
   "start_city": 0,
   "alpha": 0.5,
